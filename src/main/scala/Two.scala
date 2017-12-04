@@ -1,28 +1,20 @@
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 
-import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
+import akka.stream.scaladsl.{FileIO, Flow, Keep, RunnableGraph, Sink, Source}
 import akka.stream.{ActorMaterializer, IOResult}
 import org.slf4j.LoggerFactory
-import akka.stream.scaladsl.{FileIO, Flow, Keep, RunnableGraph, Sink, Source}
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 object Two extends App {
 
   val log = LoggerFactory.getLogger(Two.getClass)
 
-
-//  val length: RunnableGraph[Future[Int]] = FileIO.fromPath(Paths.get("two.txt")).toMat(Sink.fold(0) {
-//    case (length, s) => length + s.length
-//  })(Keep.right)
-
   def length(filename: Path)(implicit mat: ActorMaterializer, sys: ActorSystem): Source[Int, Future[IOResult]] = {
     val x: Source[Int, Future[IOResult]] = FileIO.fromPath(filename).flatMapConcat { bs =>
-      val ints = bs.toString().toCharArray.map(_.toInt)
-      println(ints)
+      val ints = bs.utf8String.map(_ - '0')
       Source.fromIterator(() => ints.toIterator)
     }
 
@@ -30,11 +22,9 @@ object Two extends App {
       case ((length, l), elem) => (length + 1, l :+ elem)
     }
 
-    val z: Source[Int, Future[IOResult]] = y.flatMapConcat {
+    y.flatMapConcat {
       case (length, ints) => Source.single(length).concat(Source.fromIterator(() => ints.toIterator))
     }
-
-    z
   }
 
   def flow(ab: (Int, Int)): Int = {
@@ -44,7 +34,6 @@ object Two extends App {
       case _ => 0
     }
   }
-
 
   def runWith(src: Source[Int, Future[IOResult]])(implicit mat: ActorMaterializer, sys: ActorSystem): RunnableGraph[Future[Int]] = {
     val s: Source[Int, Future[IOResult]] = src.take(1)
@@ -63,25 +52,5 @@ object Two extends App {
 
     u.toMat(sink)(Keep.right)
   }
-
-
-
-  // Consider broadcasting to two streams an then zipping them.  Each broadcast will either drop the first half or drop the seocnd half
-
-//  val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-//    import GraphDSL.Implicits._
-//    val in: Source[String, Future[IOResult]] = FileIO.fromPath(Paths.get("two.txt")).map(_.toString()).
-//    val out = Sink.ignore
-//
-//    val bcast = builder.add(Broadcast[Int](2))
-//    val merge = builder.add(Merge[Int](2))
-//
-//    val f1, f2, f3, f4 = Flow[Int].map(_ + 10)
-//
-//    in ~> f1 ~> bcast ~> f2 ~> merge ~> f3 ~> out
-//    bcast ~> f4 ~> merge
-//    ClosedShape
-//  })
-//
 }
 

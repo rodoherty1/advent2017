@@ -1,12 +1,10 @@
 import java.nio.file.Paths
 
-import akka.Done
 import akka.stream.IOResult
-import akka.stream.scaladsl.{Sink, Source}
-import org.scalatest.{AsyncFlatSpec, BeforeAndAfterAll, FlatSpec, Matchers}
+import akka.stream.scaladsl.Source
+import org.scalatest.{AsyncFlatSpec, BeforeAndAfterAll, Matchers}
 
 import scala.concurrent.Future
-import scalaz.stream.Process
 
 class TwoSpec extends AsyncFlatSpec with BeforeAndAfterAll with Matchers with AkkaStreamsFixture {
 
@@ -14,7 +12,7 @@ class TwoSpec extends AsyncFlatSpec with BeforeAndAfterAll with Matchers with Ak
 
   "Puzzle 2" should "unlock the 2nd star" in {
 
-    val s: Source[Int, Future[IOResult]] = Two.length(Paths.get("two1.txt"))
+    val s: Source[Int, Future[IOResult]] = Two.length(Paths.get("two.txt"))
 
     Two.runWith(s).run() map {
       i => assert(i == 6)
